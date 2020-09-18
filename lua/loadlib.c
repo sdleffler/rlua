@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.130.1.1 2017/04/19 17:20:42 roberto Exp $
+** $Id: loadlib.c,v 1.130 2017/01/12 17:14:26 roberto Exp $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -786,5 +786,39 @@ LUAMOD_API int luaopen_package (lua_State *L) {
   luaL_setfuncs(L, ll_funcs, 1);  /* open lib into global table */
   lua_pop(L, 1);  /* pop global table */
   return 1;  /* return 'package' table */
+}
+
+
+void eris_permloadlib(lua_State *L, int forUnpersist) {
+  static const lua_CFunction searchers[] = {
+    searcher_preload,
+    searcher_Lua,
+    searcher_C,
+    searcher_Croot,
+    NULL
+  };
+  static const char *const searchernames[] = {
+    "__eris.loadlib_searcher_preload",
+    "__eris.loadlib_searcher_Lua",
+    "__eris.loadlib_searcher_C",
+    "__eris.loadlib_searcher_Croot",
+    NULL
+  };
+  int i;
+
+  luaL_checktype(L, -1, LUA_TTABLE);
+  luaL_checkstack(L, 2, NULL);
+
+  for (i = 0; searchers[i]; ++i) {
+    if (forUnpersist) {
+      lua_pushstring(L, searchernames[i]);
+      lua_pushcfunction(L, searchers[i]);
+    }
+    else {
+      lua_pushcfunction(L, searchers[i]);
+      lua_pushstring(L, searchernames[i]);
+    }
+    lua_rawset(L, -3);
+  }
 }
 

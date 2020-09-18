@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.314.1.1 2017/04/19 17:39:34 roberto Exp $
+** $Id: lbaselib.c,v 1.314 2016/09/05 19:06:34 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -494,5 +494,44 @@ LUAMOD_API int luaopen_base (lua_State *L) {
   lua_pushliteral(L, LUA_VERSION);
   lua_setfield(L, -2, "_VERSION");
   return 1;
+}
+
+
+void eris_permbaselib(lua_State *L, int forUnpersist) {
+  luaL_checktype(L, -1, LUA_TTABLE);
+  luaL_checkstack(L, 2, NULL);
+
+  /* NOTE: This is a terrible, terrible hack. We push a continuation function
+   * as a normal C function. We kinda have to, though, to allow proper lookup
+   * in the ref table, and it is never ever called, so we get away with it. */
+  if (forUnpersist) {
+    lua_pushstring(L, "__eris.baselib_finishpcall");
+    lua_pushcfunction(L, (lua_CFunction)finishpcall);
+  }
+  else {
+    lua_pushcfunction(L, (lua_CFunction)finishpcall);
+    lua_pushstring(L, "__eris.baselib_finishpcall");
+  }
+  lua_rawset(L, -3);
+
+  if (forUnpersist) {
+    lua_pushstring(L, "__eris.baselib_luaB_next");
+    lua_pushcfunction(L, luaB_next);
+  }
+  else {
+    lua_pushcfunction(L, luaB_next);
+    lua_pushstring(L, "__eris.baselib_luaB_next");
+  }
+  lua_rawset(L, -3);
+
+  if (forUnpersist) {
+    lua_pushstring(L, "__eris.baselib_ipairsaux");
+    lua_pushcfunction(L, ipairsaux);
+  }
+  else {
+    lua_pushcfunction(L, ipairsaux);
+    lua_pushstring(L, "__eris.baselib_ipairsaux");
+  }
+  lua_rawset(L, -3);
 }
 

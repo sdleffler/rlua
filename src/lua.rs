@@ -34,6 +34,7 @@ bitflags! {
         const MATH = 0x80;
         const PACKAGE = 0x100;
         const DEBUG = 0x200;
+        const ERIS = 0x400;
 
         const ALL = StdLib::BASE.bits
             | StdLib::COROUTINE.bits
@@ -44,7 +45,8 @@ bitflags! {
             | StdLib::UTF8.bits
             | StdLib::MATH.bits
             | StdLib::PACKAGE.bits
-            | StdLib::DEBUG.bits;
+            | StdLib::DEBUG.bits
+            | StdLib::ERIS.bits;
 
         const ALL_NO_DEBUG = StdLib::BASE.bits
             | StdLib::COROUTINE.bits
@@ -54,7 +56,8 @@ bitflags! {
             | StdLib::STRING.bits
             | StdLib::UTF8.bits
             | StdLib::MATH.bits
-            | StdLib::PACKAGE.bits;
+            | StdLib::PACKAGE.bits
+            | StdLib::ERIS.bits;
     }
 }
 
@@ -548,6 +551,10 @@ unsafe fn load_from_std_lib(state: *mut ffi::lua_State, lua_mod: StdLib) {
     }
     if lua_mod.contains(StdLib::DEBUG) {
         ffi::luaL_requiref(state, cstr!("debug"), ffi::luaopen_debug, 1);
+        ffi::lua_pop(state, 1);
+    }
+    if lua_mod.contains(StdLib::ERIS) {
+        ffi::luaL_requiref(state, cstr!("eris"), ffi::luaopen_eris, 1);
         ffi::lua_pop(state, 1);
     }
 }

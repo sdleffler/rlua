@@ -1,5 +1,5 @@
 /*
-** $Id: lcorolib.c,v 1.10.1.1 2017/04/19 17:20:42 roberto Exp $
+** $Id: lcorolib.c,v 1.10 2016/04/11 19:19:55 roberto Exp $
 ** Coroutine Library
 ** See Copyright Notice in lua.h
 */
@@ -164,5 +164,21 @@ static const luaL_Reg co_funcs[] = {
 LUAMOD_API int luaopen_coroutine (lua_State *L) {
   luaL_newlib(L, co_funcs);
   return 1;
+}
+
+
+void eris_permcorolib(lua_State *L, int forUnpersist) {
+  luaL_checktype(L, -1, LUA_TTABLE);
+  luaL_checkstack(L, 2, NULL);
+
+  if (forUnpersist) {
+    lua_pushstring(L, "__eris.corolib_luaB_auxwrap");
+    lua_pushcfunction(L, luaB_auxwrap);
+  }
+  else {
+    lua_pushcfunction(L, luaB_auxwrap);
+    lua_pushstring(L, "__eris.corolib_luaB_auxwrap");
+  }
+  lua_rawset(L, -3);
 }
 

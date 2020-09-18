@@ -102,7 +102,7 @@ pub unsafe fn protect_lua_closure<F, R>(
     f: F,
 ) -> Result<R>
 where
-    F: Fn(*mut ffi::lua_State) -> R,
+    F: FnMut(*mut ffi::lua_State) -> R,
     R: Copy,
 {
     union URes<R: Copy> {
@@ -119,7 +119,7 @@ where
     unsafe extern "C" fn do_call<F, R>(state: *mut ffi::lua_State) -> c_int
     where
         R: Copy,
-        F: Fn(*mut ffi::lua_State) -> R,
+        F: FnMut(*mut ffi::lua_State) -> R,
     {
         let params = ffi::lua_touserdata(state, -1) as *mut Params<F, R>;
         ffi::lua_pop(state, 1);

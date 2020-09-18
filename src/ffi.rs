@@ -21,6 +21,14 @@ pub type lua_KFunction =
     unsafe extern "C" fn(state: *mut lua_State, status: c_int, ctx: lua_KContext) -> c_int;
 pub type lua_CFunction = unsafe extern "C" fn(state: *mut lua_State) -> c_int;
 pub type lua_Hook = unsafe extern "C" fn(state: *mut lua_State, ar: *mut lua_Debug);
+pub type lua_Reader =
+    unsafe extern "C" fn(state: *mut lua_State, ud: *mut c_void, sz: *mut usize) -> *const c_char;
+pub type lua_Writer = unsafe extern "C" fn(
+    state: *mut lua_State,
+    p: *const c_void,
+    sz: usize,
+    ud: *mut c_void,
+) -> c_int;
 
 #[repr(C)]
 pub struct lua_Debug {
@@ -214,6 +222,17 @@ extern "C" {
     );
     pub fn luaL_len(push_state: *mut lua_State, index: c_int) -> lua_Integer;
     pub fn luaL_tolstring(state: *mut lua_State, index: c_int, len: *mut usize) -> *const c_char;
+
+    pub fn eris_dump(state: *mut lua_State, writer: lua_Writer, ud: *mut c_void);
+    pub fn eris_undump(state: *mut lua_State, reader: lua_Reader, ud: *mut c_void);
+
+    pub fn eris_persist(state: *mut lua_State, perms: c_int, value: c_int);
+    pub fn eris_unpersist(state: *mut lua_State, perms: c_int, value: c_int);
+
+    pub fn eris_get_setting(state: *mut lua_State, name: *const c_char);
+    pub fn eris_set_setting(state: *mut lua_State, name: *const c_char, value: c_int);
+
+    pub fn luaopen_eris(state: *mut lua_State) -> c_int;
 }
 
 // The following are re-implementations of what are macros in the Lua C API

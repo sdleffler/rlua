@@ -49,6 +49,7 @@ mod error;
 mod ffi;
 mod function;
 mod hook;
+mod io;
 mod lua;
 mod markers;
 mod multi;

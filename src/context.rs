@@ -1,14 +1,16 @@
 use std::any::TypeId;
 use std::cell::RefCell;
 use std::ffi::CString;
+use std::io::{Read, Write};
 use std::marker::PhantomData;
 use std::os::raw::{c_char, c_int, c_void};
 use std::sync::Arc;
 use std::{mem, ptr};
 
-use crate::error::{Error, Result};
+use crate::error::{Error, ExternalError, Result};
 use crate::ffi;
 use crate::function::Function;
+use crate::io::{Reader, Writer};
 use crate::lua::{extra_data, ExtraData, FUNCTION_METATABLE_REGISTRY_KEY};
 use crate::markers::{Invariant, NoUnwindSafe};
 use crate::scope::Scope;
@@ -532,6 +534,70 @@ impl<'lua> Context<'lua> {
             );
             for id in rlua_expect!(unref_list, "unref list not set") {
                 ffi::luaL_unref(self.state, ffi::LUA_REGISTRYINDEX, id);
+            }
+        }
+    }
+
+    /// Dump (serialize) a Lua value using Eris's `eris_dump` function.
+    ///
+    /// The optional `perms` parameter contains the "permanent object table"; this is a table
+    /// mapping Lua objects to keys, such that when one of those objects is serialized, the
+    /// key it maps to is output instead. This allows for serialization of userdata and foreign
+    /// functions which would otherwise not be serializable. Note that Eris will serialize
+    /// light userdata as the raw pointer value! If you are storing an object in light userdata
+    /// you will likely want to give it an entry in the permanent object table.
+    pub fn dump_value<W: Write, P: ToLua<'lua>, T: ToLua<'lua>>(
+        self,
+        writer: W,
+        perms: P,
+        value: T,
+    ) -> Result<()> {
+        unsafe {
+            self.push_value(P::to_lua(perms, self)?)?;
+            self.push_value(T::to_lua(value, self)?)?;
+
+            let mut lua_writer = Writer::new(writer);
+            protect_lua_closure(self.state, 2, 1, |state| {
+                ffi::eris_dump(
+                    state,
+                    Writer::<W>::lua_writer,
+                    &mut lua_writer as *mut _ as *mut c_void,
+                );
+            })?;
+
+            match lua_writer.error {
+                None => Ok(()),
+                Some(e) => Err(Box::new(e).to_lua_err()),
+            }
+        }
+    }
+
+    /// Un-dump (deserialize) a Lua value using Eris's `eris_undump` function.
+    ///
+    /// The optional `perms` parameter contains the "permanent object table"; this is a table
+    /// which is the *inverse* mapping to the permanent object table used when serializing.
+    /// When a key is found while deserializing, then that value is read as the corresponding
+    /// value from the permanent object table.
+    pub fn undump_value<R: Read, P: ToLua<'lua>, T: FromLua<'lua>>(
+        self,
+        reader: R,
+        perms: P,
+    ) -> Result<T> {
+        unsafe {
+            self.push_value(perms.to_lua(self)?)?;
+
+            let mut lua_reader = Reader::new(reader);
+            protect_lua_closure(self.state, 1, 1, |state| {
+                ffi::eris_undump(
+                    state,
+                    Reader::<R>::lua_reader,
+                    &mut lua_reader as *mut _ as *mut c_void,
+                );
+            })?;
+
+            match lua_reader.error {
+                None => T::from_lua(self.pop_value(), self),
+                Some(e) => Err(Box::new(e).to_lua_err()),
             }
         }
     }
