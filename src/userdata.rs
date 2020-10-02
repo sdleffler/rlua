@@ -67,6 +67,8 @@ pub enum MetaMethod {
     ///
     /// This is not an operator, but it will be called by the built-in `pairs` function.
     Pairs,
+    /// The `__persist` metamethod, which is read by Eris when attempting to serialize userdarta.
+    Persist,
 }
 
 impl MetaMethod {
@@ -96,6 +98,7 @@ impl MetaMethod {
             MetaMethod::Call => b"__call",
             MetaMethod::ToString => b"__tostring",
             MetaMethod::Pairs => b"__pairs",
+            MetaMethod::Persist => b"__persist",
         }
     }
 }
