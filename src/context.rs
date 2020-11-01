@@ -7,7 +7,7 @@ use std::os::raw::{c_char, c_int, c_void};
 use std::sync::Arc;
 use std::{mem, ptr};
 
-use crate::error::{Error, ExternalError, Result};
+use crate::error::{Error, ExternalError, ExternalResult, Result};
 use crate::ffi;
 use crate::function::Function;
 use crate::io::{Reader, Writer};
@@ -599,6 +599,21 @@ impl<'lua> Context<'lua> {
                 None => T::from_lua(self.pop_value(), self),
                 Some(e) => Err(Box::new(e).to_lua_err()),
             }
+        }
+    }
+
+    pub fn set_dump_setting<S, V>(self, name: &S, value: V) -> Result<()>
+    where
+        S: ?Sized + AsRef<[u8]>,
+        V: ToLua<'lua>,
+    {
+        let c_string = CString::new(name.as_ref()).to_lua_err()?;
+        unsafe {
+            self.push_value(value.to_lua(self)?)?;
+
+            protect_lua_closure(self.state, 1, 1, |state| {
+                ffi::eris_set_setting(state, c_string.as_ptr(), -1);
+            })
         }
     }
 
